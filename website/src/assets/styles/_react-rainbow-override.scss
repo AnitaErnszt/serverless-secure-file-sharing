@@ -22,7 +22,7 @@
 }
 
 .rainbow-error {
-  position: absolute;
-  right: 10%;
-  z-index: 1000;
+  position: absolute !important;
+  right: 10% !important;
+  z-index: 1000 !important;
 }

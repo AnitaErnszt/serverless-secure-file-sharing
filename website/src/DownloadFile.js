@@ -4,7 +4,7 @@ import api, { extractAPIErrorString } from "./api/index";
 import axios from "axios";
 
 const DownloadFile = () => {
-  const [publicKey, setPublicKey] = useState(" ");
+  const [publicKey, setPublicKey] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [isLoading, setLoading] = useState(false);
   const [state, setState] = useState(false);
@@ -43,6 +43,8 @@ const DownloadFile = () => {
             document.body.appendChild(link);
             link.click();
             setState({ type: "success" });
+            setAccessCode(null);
+            setPublicKey(null);
           });
         },
         (err) => {

@@ -3,7 +3,7 @@ import { Button, Input, Notification } from "react-rainbow-components";
 import api, { extractAPIErrorString } from "./api/index";
 
 const DeleteFile = () => {
-  const [publicKey, setPublicKey] = useState(" ");
+  const [publicKey, setPublicKey] = useState("");
   const [deleteCode, setDeleteCode] = useState("");
   const [state, setState] = useState(false);
   const [isLoading, setLoading] = useState(false);
@@ -28,6 +28,8 @@ const DeleteFile = () => {
       .then(
         () => {
           setState({ type: "success" });
+          setDeleteCode(null);
+          setPublicKey(null);
         },
         (err) => {
           setState({ type: "error", message: extractAPIErrorString(err) });
