@@ -1,0 +1,183 @@
+openapi: 3.0.0
+info:
+  title: Serverless File Sharing API schema
+  description: API schema to support the backend of the serveless file sharing
+  version: 2.0.1
+
+references:
+  cors: &cors
+    options:
+      summary: CORS support
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: "{\n  \"statusCode\" : 200\n}\n"
+        responses:
+          default:
+            statusCode: 200
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'OPTIONS,GET,POST,PUT,DELETE'"
+              method.response.header.Access-Control-Allow-Headers: "'*'"
+            responseTemplates:
+              application/json: "{}\n"
+      responses:
+        "200":
+          description: Default response for CORS method
+          headers:
+            Access-Control-Allow-Origin:
+              type: string
+            Access-Control-Allow-Methods:
+              type: string
+            Access-Control-Allow-Headers:
+              type: string
+
+x-amazon-apigateway-request-validators:
+  standard:
+    validateRequestBody: true
+    validateRequestParameters: true
+  params:
+    validateRequestBody: false
+    validateRequestParameters: true
+  none:
+    validateRequestBody: false
+    validateRequestParameters: false
+x-amazon-apigateway-request-validator: standard
+
+paths:
+  /v1/files/generate-presigned-url:
+    <<: *cors
+    post:
+      tags:
+        - Files
+      x-amazon-apigateway-integration:
+        uri:
+          "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:generate-presigned-upload-url/invocations"
+        passthroughBehaviour: when_no_match
+        httpMethod: POST
+        type: aws_proxy
+        responses: {}
+      summary: Generate upload URL
+      operationId: GenerateUploadURL
+      requestBody:
+        description: "data to generate pesigned URL for file upload"
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - file_name
+                - content_type
+              properties:
+                file_name:
+                  type: string
+                  maxLength: 255
+                  description: "the email belonging to the user account"
+                content_type:
+                  type: string
+                access_code:
+                  type: string
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, failure]
+                    example: success
+                  data:
+                    properties:
+                      upload_url:
+                        type: string
+                      public_key:
+                        type: string
+
+  /v1/files/{id}:
+    <<: *cors
+    get:
+      tags:
+        - Files
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: access_code
+          in: query
+          description: Access code for locked files
+          required: false
+          schema:
+            type: string
+      x-amazon-apigateway-integration:
+        uri:
+          "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:generate-presigned-download-url/invocations"
+        passthroughBehaviour: when_no_match
+        httpMethod: POST
+        type: aws_proxy
+        responses: {}
+      summary: Get file
+      operationId: GetFile
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, failure]
+                    example: success
+                  data:
+                    properties:
+                      download_url:
+                        type: string
+
+    delete:
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+        - name: delete_code
+          in: query
+          description: Delete code to authorize deletion of the file"
+          required: false
+          schema:
+            type: string
+      tags:
+        - Files
+      x-amazon-apigateway-integration:
+        uri:
+          "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:delete-file/invocations"
+        passthroughBehaviour: when_no_match
+        httpMethod: POST
+        type: aws_proxy
+        responses: {}
+      summary: "Deletes file"
+      operationId: DeleteFile
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success, failure]
+                    example: success
+
+components:
+  parameters:
+    IdParam:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string

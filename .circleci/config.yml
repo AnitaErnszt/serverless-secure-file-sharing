@@ -1,0 +1,99 @@
+version: 2.1
+executors:
+  main-executor:
+    docker:
+      - image: circleci/python:3.8.7-node
+
+references:
+  # ~/.local pip cache
+  restore_local_pip_cache: &restore_local_pip_cache
+    restore_cache:
+      keys:
+        - stack-pip-cache
+  save_local_pip_cache: &save_local_pip_cache
+    save_cache:
+      key: stack-pip-cache
+      paths:
+        - ~/.local
+
+  # ~/.venv cache
+  restore_venv_cache: &restore_venv_cache
+    restore_cache:
+      keys:
+        - stack-venv-pip-cache-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+        - stack-venv-pip-cache
+  save_venv_cache: &save_venv_cache
+    save_cache:
+      key: stack-venv-pip-cache-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+      paths:
+        - .venv
+
+  # npm cache
+  restore_npm_cache: &restore_npm_cache
+    restore_cache:
+      keys:
+        - stack-npm-cache-{{ checksum "setup.py" }}
+  save_npm_cache: &save_npm_cache
+    save_cache:
+      key: stack-npm-cache-{{ checksum "setup.py" }}
+      paths:
+        - node_modules
+jobs:
+  cdk-build:
+    executor: main-executor
+    steps:
+      # Keep pip cached
+      - *restore_local_pip_cache
+      - run: pip install awscli --upgrade --user
+      - *save_local_pip_cache
+
+      - checkout
+
+      # Cache the venv pip as well
+      - *restore_venv_cache
+      # Also cache npm!
+      - *restore_npm_cache
+      - run:
+          name: Install python dependencies in venv
+          command: |
+            npm i aws-cdk@latest
+            python3 -m venv .venv
+            source .venv/bin/activate
+            pip install -r requirements.txt
+      - *save_venv_cache
+      - *save_npm_cache
+  cdk-deploy:
+    executor: main-executor
+    steps:
+      - *restore_local_pip_cache
+      - checkout
+      - *restore_venv_cache
+      - *restore_npm_cache
+      - run:
+          name: Deploy
+          command: |
+            source .venv/bin/activate
+            node_modules/aws-cdk/bin/cdk deploy --require-approval=never
+  website-build:
+    executor: main-executor
+    steps:
+      - checkout
+      - run: cd website
+      - run: yarn install && yarn build
+      # - aws s3 sync build/ s3://website_bucket/  TODO: get website bucket out of CDK
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - cdk-build:
+          filters:
+            branches:
+              ignore:
+                - feat/.*
+                - feature/.*
+      - cdk-deploy:
+          filters:
+            branches:
+              only: main
+          requires:
+            - build
