@@ -1,30 +1,37 @@
-from aws_cdk import Duration
 from constructs import Construct
-from aws_cdk.aws_lambda import Code, Function, Runtime
-from aws_cdk.aws_s3 import EventType
-from aws_cdk.aws_s3_notifications import LambdaDestination
+from aws_cdk.aws_lambda_event_sources import SqsEventSource
 
+from serverless_secure_file_sharing.utils import LambdaFunction
 from serverless_secure_file_sharing.resources.file_sharing_cdn import FileSharingCDN
+from serverless_secure_file_sharing.resources.lambda_layers import LambdaLayers
+from serverless_secure_file_sharing.resources.queues import Queues
 
 class AsyncFunctions(object):
 
     def __init__(
         self,
         scope: Construct,
-        file_sharing_cdn: FileSharingCDN
+        file_sharing_cdn: FileSharingCDN,
+        lambda_layers: LambdaLayers,
+        queues: Queues
     ):
-        #####################
+
+        lambda_env = {
+            "CDN_BUCKET": file_sharing_cdn.bucket.bucket_name,
+            "DELETE_FILE_QUEUE_URL": queues.delete_file_queue.queue_url
+        }
+
         # ASYNC DELETE FILE #
-        #####################
-        async_delete_file_fn = Function(
+        async_delete_file_fn = LambdaFunction(
             scope,
             "AsyncDeleteFileLambda",
-            code=Code.from_asset("src/async/"),
-            function_name="async-delete-file",
+            "async-delete-file",
+            path="src/async/",
             handler="delete_file.lambda_handler",
-            memory_size=128,
-            runtime=Runtime.PYTHON_3_9,
-            timeout=Duration.seconds(30),
+            env=lambda_env,
+            layers=[lambda_layers.base],
         )
-        file_sharing_cdn.bucket.grant_delete(async_delete_file_fn)
-        file_sharing_cdn.bucket.add_event_notification(EventType.OBJECT_CREATED, LambdaDestination(async_delete_file_fn))
+        file_sharing_cdn.bucket.grant_delete(async_delete_file_fn.function)
+        async_delete_file_fn.function.add_event_source(
+            SqsEventSource(queues.delete_file_queue, batch_size=1)
+        )

@@ -10,17 +10,15 @@ const Navbar = () => {
             <NavLink
               className="nav-link"
               // onClick={() => window.location.reload()}
-              // exact={true}
               to="/"
             >
-              Home
+              Upload
             </NavLink>
           </li>
           <li className="nav-item ms-4">
             <NavLink
               className="nav-link"
               // onClick={() => window.location.reload()}
-              // exact={true}
               to="/download"
             >
               Download
@@ -30,7 +28,6 @@ const Navbar = () => {
             <NavLink
               className="nav-link"
               // onClick={() => window.location.reload()}
-              // exact={true}
               to="/delete"
             >
               Delete

@@ -45,14 +45,14 @@ const DownloadFile = () => {
             setState({ type: "success" });
             setAccessCode(null);
             setPublicKey(null);
+            setLoading(false);
           });
         },
         (err) => {
           setState({ type: "error", message: extractAPIErrorString(err) });
           setLoading(false);
         }
-      )
-      .finally(() => setLoading(false));
+      );
   };
 
   return (

@@ -60,7 +60,7 @@ def lambda_handler(event, context):
                     "Bucket": s3_bucket,
                     "Key": f"{public_key}/{file_name}",
                 }, 
-                ExpiresIn=120000,
+                ExpiresIn=120,
                 HttpMethod="GET"
             )
 

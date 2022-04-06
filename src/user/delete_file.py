@@ -9,6 +9,8 @@ s3 = boto3.client('s3')
 s3_bucket = os.environ["CDN_BUCKET"]
 dynamodb = boto3.resource('dynamodb')
 inventory_table = dynamodb.Table(os.environ.get("INVENTORY_TABLE"))
+sqs_client = boto3.client("sqs")
+delete_file_queue_url = os.environ["DELETE_FILE_QUEUE_URL"]
 
 def lambda_handler(event, context):
     public_key = pydash.get(event, "pathParameters.id")
@@ -30,10 +32,9 @@ def lambda_handler(event, context):
         return api_response("Invalid public key - delete code combination.", 400)
 
     try:
-        file_name = file.get("object_key")
         s3.delete_object(
             Bucket=s3_bucket,
-            Key=f"{public_key}/{file_name}",
+            Key=public_key,
         )
 
     except Exception as e:
@@ -43,6 +44,14 @@ def lambda_handler(event, context):
     try:
         inventory_table.delete_item(
             Key={"key": public_key}
+        )
+        sqs_client.send_message(
+            QueueUrl=delete_file_queue_url,
+            MessageBody=json.dumps(
+                {
+                    "public_key": public_key
+                }
+            ),
         )
     
     except ClientError as e:

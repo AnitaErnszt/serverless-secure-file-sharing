@@ -10,6 +10,7 @@ from serverless_secure_file_sharing.resources.file_sharing_cdn import FileSharin
 from serverless_secure_file_sharing.functions.user_functions import UserFunctions
 from serverless_secure_file_sharing.functions.async_functions import AsyncFunctions
 from serverless_secure_file_sharing.resources.lambda_layers import LambdaLayers
+from serverless_secure_file_sharing.resources.queues import Queues
 
 class ServerlessSecureFileSharingStack(Stack):
 
@@ -23,6 +24,7 @@ class ServerlessSecureFileSharingStack(Stack):
         file_sharing_cdn = FileSharingCDN(self, domain, ssl_cert)
         lambda_layers = LambdaLayers(self)
         tables = Tables(self)
+        queues = Queues(self)
 
         rest_api = RestAPI(self, domain, ssl_cert)
 
@@ -31,10 +33,13 @@ class ServerlessSecureFileSharingStack(Stack):
             file_sharing_cdn=file_sharing_cdn,
             api=rest_api,
             tables=tables,
-            lambda_layers=lambda_layers
+            lambda_layers=lambda_layers,
+            queues=queues
         )
 
-        # AsyncFunctions(
-        #     self,
-        #     file_sharing_cdn=file_sharing_cdn
-        # )
+        AsyncFunctions(
+            self,
+            file_sharing_cdn=file_sharing_cdn,
+            lambda_layers=lambda_layers,
+            queues=queues
+        )
